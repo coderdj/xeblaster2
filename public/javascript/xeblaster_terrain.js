@@ -25,12 +25,10 @@ function CreateInitialTerrain(){
 
 }
 
-function AnimateTerrain(){
+function AnimateTerrain(corr){
 
-    var ts = document.xeblaster_settings['terrain_speed'];
-    if(document.xeblaster_settings['speed'] == true)
-        ts *= document.xeblaster_settings['run_modifier'];
-    //console.log(document.xeblaster_items['terrain'].length)
+    var ts = document.xeblaster_settings['terrain_speed']*corr;
+    
     for(var i=0; i<document.xeblaster_items['terrain'].length; i+=1){
         document.xeblaster_items['terrain'][i].position.x -= ts*document.xeblaster_settings['movement_direction'][0];
         document.xeblaster_items['terrain'][i].position.y -= ts*document.xeblaster_settings['movement_direction'][1];

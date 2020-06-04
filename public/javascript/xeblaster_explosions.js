@@ -1,5 +1,3 @@
-
-
 function animateExplosions(clock_corr){
     for(var x=0; x< document.xeblaster_items['explosions'].length; x+=1){
         ex = document.xeblaster_items['explosions'][x];
@@ -89,9 +87,11 @@ function MakeExplosion(type, posx, posy, posz){
         //explosion['light'].decay = 4000;
         //explosion['light'].visible = true;  
         explosion['light'].position.set(tpm*posx, tpm*posy, posz);
-        document.xeblaster_items['explosions'].push(explosion);                           
+        document.xeblaster_items['explosions'].push(explosion);  
+        document.sounds['minihit'].currentTime = 0;
+        document.sounds['minihit'].play();                         
     }
-    else if(type == 'xenon'){
+    else if(type == 'xenon' || type == 'diamonator'){
         explosion = {
             //"light": new THREE.PointLight( 0xaaaaff, 1000, 5000 ),
             "light": document.xeblaster_items['point_lights'][0],
@@ -99,7 +99,10 @@ function MakeExplosion(type, posx, posy, posz){
             'particle_timer': 0,
             'falloff': 500
         }
-        explosion['light'].color.setHex(0x6666ff);
+        if(type == 'xenon')
+            explosion['light'].color.setHex(0x6666ff);
+        if(type == 'diamonator')
+            explosion['light'].color.setHex(0xffaa66);
         explosion['light'].intensity = 2000;
         //explosion['light'].decay = 1000
         //explosion['light'].decay = 20000;
@@ -120,6 +123,8 @@ function MakeExplosion(type, posx, posy, posz){
         }
         properties = {map: new THREE.CanvasTexture( generateSprite(.5) ),
             size: 20, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, };
+        if(type == "xenon") properties['color'] = 0x6666ff;
+        else if(type == "diamonator") properties['color'] = 0xffaa66;
         material = new THREE.PointsMaterial(properties);
         var photon_system = new THREE.ParticleSystem( photons, material );
         photon_system.sortParticles = true;
@@ -128,6 +133,10 @@ function MakeExplosion(type, posx, posy, posz){
         explosion['particles']['system'] = photon_system;
         explosion['particles']['geometry'] = photons;
         explosion['particle_timer'] = 5;
+
+        idx = Math.floor(Math.random()*3);
+        document.sounds['littleboom'][idx].currentTime = 0;
+        document.sounds['littleboom'][idx].play(); 
 
         document.xeblaster_items['explosions'].push(explosion);    
 
