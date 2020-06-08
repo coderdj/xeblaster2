@@ -22,7 +22,8 @@ function InitializeMemory(div){
         'sphere_lambert': new THREE.MeshLambertMaterial( { color: 0x156289, emissive: 0x072534}),
         'star_lambert': new THREE.MeshLambertMaterial( { color: 0x898989, emissive: 0x343434}),
         'diamonator_lambert': new THREE.MeshLambertMaterial( { color: 0x896215, emissive: 0x292525}),
-
+        'torus_lambert': new THREE.MeshLambertMaterial( { color: 0x896215, emissive: 0x292525}),
+        'bomb_lambert': new THREE.MeshLambertMaterial({ color: 0xff5e13, emissive: 0x292525}),
     };
 
     document.three = {};
@@ -75,13 +76,13 @@ function InitializeScene(div){
 
     CreateInitialTerrain();
 
-    while(document.xeblaster_items['xenon_pool'].length < 30){
+    while(document.xeblaster_items['xenon_pool'].length < 20){
         XenonObject.create();
     }
-    while(document.xeblaster_items['xenon_lightpool'].length < 10){
+    while(document.xeblaster_items['xenon_lightpool'].length < 5){
         XenonObject.createlight();
     }
-    while(document.xeblaster_items['diamonator_pool'].length < 60){
+    while(document.xeblaster_items['diamonator_pool'].length < 40){
         DiamonatorObject.create();
     }
     while(document.xeblaster_items['star_pool'].length < 150){
@@ -93,7 +94,13 @@ function InitializeScene(div){
     while(document.xeblaster_items['enemybullet_pool'].length < 10){
         EnemyBulletObject.create();
     }
-    while(document.xeblaster_items['point_lights'].length < 10){
+    while(document.xeblaster_items['bomb_pool'].length < 6){
+        EnemyBombObject.create();
+    }
+    while(document.xeblaster_items['bomber_pool'].length < 8){
+        BomberObject.create();
+    }
+    while(document.xeblaster_items['point_lights'].length < 7){
         light=new THREE.PointLight( 0xffffff, 0, 4000 );
         light.position.set(0, 0, 10000);
         document.three['scene'].add(light);
@@ -172,16 +179,23 @@ function animate() {
 
         document.three['renderer'].render( document.three['scene'], document.three['camera'] );
         r = Math.random()/document.xeblaster_settings['difficulty_modifier'];
-        r2 = Math.random()/(1.1*document.xeblaster_settings['difficulty_modifier']);
+        r2 = Math.random()/(document.xeblaster_settings['difficulty_modifier']);
+        r3 = Math.random()/(document.xeblaster_settings['difficulty_modifier']);
+
         if(r<document.xeblaster_settings['xe_spawn_chance']*sm)
             document.xeblaster_items['active_objects'].push(new XenonObject());
         if(r<.2*sm)
             document.xeblaster_items['active_objects'].push(new StarObject());
         if(r2<(document.xeblaster_settings['diamanator_spawn_chance']*sm))
             document.xeblaster_items['active_objects'].push(new DiamonatorObject());
-
+        if(r3<(document.xeblaster_settings['bomber_spawn_chance']*sm))
+            document.xeblaster_items['active_objects'].push(new BomberObject);
         computePlayerMovement(1);
+
+        document.hasbomb = false;
         for(var i=0; i<document.xeblaster_items['active_objects'].length; i+=1){
+            if(document.xeblaster_items['active_objects'][i].name == 'bomb')
+                document.hasbomb = true;
             if(document.xeblaster_items['active_objects'][i].exists==false)
                 document.xeblaster_items['active_objects'].splice(i, 1);
             else if("name" in document.xeblaster_items['active_objects'][i] && 
@@ -190,6 +204,9 @@ function animate() {
                 document.xeblaster_items['active_objects'][i].animate(1*sm);
             else
                 document.xeblaster_items['active_objects'][i].animate(1);
+        }
+        if(!document.hasbomb){
+            document.sounds['timer'].pause();
         }
         
         animateExplosions(1);
@@ -255,7 +272,8 @@ function SetDefaults(div, notobjects=false){
         'score_time_decay': .02,
         'bullet_cost': 0.05,
         'xe_spawn_chance': .0025,
-        'diamanator_spawn_chance': 0.01,
+        'diamanator_spawn_chance': 0.004,
+        'bomber_spawn_chance': .0015,
         'score': 0,
 
         'gun_levels': [
@@ -296,6 +314,9 @@ function SetDefaults(div, notobjects=false){
             star_pool: [],
             point_lights: [],
             terrain: [],
+            bomber_pool: [],
+            bomb_pool: [],
+            bomb_lightpool: []
         };
     }
 

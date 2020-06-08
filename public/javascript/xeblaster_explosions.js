@@ -71,6 +71,7 @@ function generateSprite(scaler) {
 
 function MakeExplosion(type, posx, posy, posz, vx=0, vy=0, vz=0){
     tpm = document.xeblaster_settings['terrain_perspective_modifier'];
+    var bigobjects = ['xenon', 'diamonator', 'playerhit', 'kamikaze', 'bomber', 'bomb'];
     if(document.xeblaster_items['point_lights'].length == 0)
         return;
     if(type=='hit'){
@@ -91,40 +92,54 @@ function MakeExplosion(type, posx, posy, posz, vx=0, vy=0, vz=0){
         document.sounds['minihit'].currentTime = 0;
         document.sounds['minihit'].play();                         
     }
-    else if(type == 'xenon' || type == 'diamonator' || type == 'playerhit' || type=='kamikaze'){
+    else if(bigobjects.includes(type)){
+        // Defaults
         var falloff=500;
-        if(type=='kamikaze') falloff = 100;
+        var color = 0x6666ff;
+        var particle_vel=2;
+        var nparticles = document.xeblaster_settings['explosion_particles_small'];
+        var psize=20;
+        var ptimer=5;
+        if(type == 'diamonator')
+            color = 0xff8844;
+        if(type == 'xenon')
+           color = 0x6666ff;
+        if(type == "bomber")
+            color = 0xff5e13;
+        if(type == 'playerhit'){
+            nparticles/=2;
+            color = 0xff0000;
+        }
+        if(type=="bomb"){
+            color = 0xff5e13;
+            falloff = 100;
+            nparticles*=3;
+            particle_vel=1;
+            psize=40;
+            ptimer=25;
+        }
+        if(type=='kamikaze'){ 
+            color = 0xff0000;
+            falloff = 100;
+            nparticles*=3;
+            particle_vel=.5;
+            psize=50;
+            ptimer=35;
+        }
         explosion = {
-            //"light": new THREE.PointLight( 0xaaaaff, 1000, 5000 ),
             "light": document.xeblaster_items['point_lights'][0],
             "particles": null,
             'particle_timer': 0,
             'falloff': falloff
         }
-        if(type == 'xenon')
-            explosion['light'].color.setHex(0x6666ff);
-        if(type == 'diamonator')
-            explosion['light'].color.setHex(0xff8844);
-        if(type == 'playerhit' || type == 'kamikaze')
-            explosion['light'].color.setHex(0xff0000);
+        explosion['light'].color.setHex(color);
         explosion['light'].intensity = 2000;
-        //explosion['light'].decay = 1000
-        //explosion['light'].decay = 20000;
         explosion['light'].position.set(tpm*posx, tpm*posy, posz);
-        //explosion['light'].visible = true;  
         document.xeblaster_items['point_lights'].splice(0, 1);
      
         
         // Make Particles
         var photons = new THREE.Geometry();
-        particle_vel = 2;
-        var nparticles = document.xeblaster_settings['explosion_particles_small'];
-        if(type == 'playerhit')
-            nparticles/=2;
-        if(type == 'kamikaze'){
-            nparticles*=2;
-            particle_vel=.5;
-        }
         for(var x=0; x<nparticles; x+=1){
             var particle = new THREE.Vector3( posx, posy, posz);
             particle.velocity = new THREE.Vector3( vx+particle_vel*GetV(Math.random()),
@@ -132,18 +147,14 @@ function MakeExplosion(type, posx, posy, posz, vx=0, vy=0, vz=0){
         
             photons.vertices.push(particle);
         }
-        var psize=20;
-        var ptimer=5;
-        if(type=='kamikaze') {
-            psize=50;
-            ptimer=35;
-            
-        }
+        
+        
         properties = {map: new THREE.CanvasTexture( generateSprite(.5) ),
             size: psize, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, };
         if(type == "xenon") properties['color'] = 0x6666ff;
         else if(type == "diamonator") properties['color'] = 0xff8844;
         else if(type == "playerhit" || type=='kamikaze') properties['color'] = 0xff0000;
+        else if(type=="bomb") properties['color'] = 0xff5e13;
 
         material = new THREE.PointsMaterial(properties);
         var photon_system = new THREE.ParticleSystem( photons, material );
@@ -157,6 +168,18 @@ function MakeExplosion(type, posx, posy, posz, vx=0, vy=0, vz=0){
         if(type == 'kamikaze'){
             document.sounds['bigboom'].currentTime = 0;
             document.sounds['bigboom'].play(); 
+        }
+        else if(type=="bomb"){
+            document.sounds['bomb_explode'].currentTime = 0;
+            document.sounds['bomb_explode'].play();
+        }
+        else if(type=="xenon"){
+            document.sounds['littleboom'][3].currentTime = 0;
+            document.sounds['littleboom'][3].play(); 
+        }
+        else if(type=="bomber"){
+            document.sounds['coin'].currentTime = 0;
+            document.sounds['coin'].play(); 
         }
         else{
             idx = Math.floor(Math.random()*3);

@@ -16,6 +16,7 @@ body {
     visibility: visible;
     display: block;
 }
+
 .reveal-modal {
     display: block;
     background:#e1e1e1; 

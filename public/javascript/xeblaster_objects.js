@@ -258,12 +258,100 @@ class DiamonatorObject extends ScreenObject {
     }
 }
 
+class BomberObject extends ScreenObject {
+    constructor(position=[0,0,10000], direction=[1, 0, 0]){
+        /*
+        We ignore the supplied position and will randomly place this object
+        */
+        super('bomber', position, direction);
+        this.hp=2;
+        
+        // Place off left of screen in top half
+        var screenw = document.xeblaster_settings['play_right'] - document.xeblaster_settings['screen_left'];
+        var screenh = document.xeblaster_settings['screen_top'] - document.xeblaster_settings['screen_bottom'];
+        this.position = [
+            document.xeblaster_settings['screen_left'] - .1*screenw,
+            document.xeblaster_settings['screen_bottom'] + 0.7*screenh + Math.random()*(0.25*screenh),
+            document.xeblaster_settings['player_height']
+        ];
+        this.speed = 4.5*(Math.random() * document.xeblaster_settings['xe_speed_variance'] + document.xeblaster_settings['xe_min_speed']);
+        this.bulletchance = 0.0025;
+    }
+
+    animate(modifier){
+        super.animate(modifier);
+        this.obj.rotation.y += Math.PI / 24;
+        this.obj.rotation.x += Math.PI / 48;
+        var rand = Math.random()*document.xeblaster_settings['difficulty_modifier'];
+        if(rand < this.bulletchance && document.xeblaster_items['bomb_pool'].length>0){
+            var pos = [this.position[0], this.position[1], this.position[2]];
+            document.xeblaster_items['active_objects'].push(new EnemyBombObject(pos,[0,-1,0]));
+            document.sounds['bomb'].currentTime = 0;
+            document.sounds['bomb'].play();
+            document.sounds['timer'].currentTime = 0;
+            document.sounds['timer'].play();
+            document.hasbomb = true;
+        }
+    }
+
+    static create(){
+        /*
+        Create this object and add to store
+        */
+        var s = Math.random() * 100 + 50;
+        var geometry = new THREE.TorusGeometry( 200, 40, 8, 20 );
+        var material = document.xeblaster_materials['torus_lambert']; 
+        var torus = new THREE.Mesh( geometry, material );
+        torus.position.set(0, 0, 10000);
+        document.three['scene'].add(torus);
+        document.xeblaster_items["bomber_pool"].push(torus);
+    }
+}
+
+class EnemyBombObject extends ScreenObject {
+    constructor(position, direction=[0, -1, 0]){
+        super('bomb', position, direction);
+        this.livesfor = 70;
+        this.speed = 2*(Math.random() * 25 + 25);
+
+    }
+
+    animate(modifier){
+        super.animate(modifier);
+        this.livesfor -=1;
+        if(this.livesfor==0){
+            MakeExplosion('bomb', this.position[0], this.position[1], this.position[2]);
+            this.remove_self();
+            var self = this;
+            CheckPlayerCollisions(self, 500, 500, 'bomb');
+        }
+        if(this.exists)
+            this.light.intensity = 10;
+    }
+
+    static create(){
+        var color = 0xff5e13;
+        var geometry = new THREE.IcosahedronGeometry( 150, 0 );
+        var material = document.xeblaster_materials['bomb_lambert']; 
+        var ico = new THREE.Mesh( geometry, material );
+        ico.position.set(0, 0, 10000);
+        document.three['scene'].add(ico);
+        document.xeblaster_items["bomb_pool"].push(ico);
+
+        var bomblight = new THREE.PointLight( color, 0, 4000 );
+        bomblight.position.set(0, 0, 10000);
+        document.three['scene'].add(bomblight);
+        document.xeblaster_items['bomb_lightpool'].push(bomblight);
+    }
+}
+
+
 function CreateBullet(name, color, topool=true){ 
     var laserBeam= new THREEx.LaserBeam(color);
     var bullet= laserBeam.object3d
     bullet.rotation.z= -Math.PI/2;
     if(name == 'bullet'){
-        if(document.xeblaster_settings['gun_level'] in [0, 1])
+        if(document.xeblaster_settings['gun_level'] < 2)
             bullet.scale.set(500, 200, 200);
         else  
             bullet.scale.set(500, 350, 350);
@@ -288,9 +376,9 @@ function CreateBullet(name, color, topool=true){
 
 function CheckEnemyCollisions(self, playerbullet){
     document.xeblaster_items['active_objects'].forEach(function(obj){
-        if(obj.name != 'xenon' && obj.name != "diamonator")
+        var objects = ['xenon', "diamonator", "bomber", "bomb"];
+        if(!objects.includes(obj.name))
             return;
-        
         
         var tolerance_x = 150 + (20*document.xeblaster_settings['gun_level']);
         var tolerance_y = 300 + (30*document.xeblaster_settings['gun_level']);
@@ -304,6 +392,11 @@ function CheckEnemyCollisions(self, playerbullet){
                 document.xeblaster_settings['score'] += 1;
             }
             else{
+                if(obj.name == 'bomb'){
+                    document.sounds['bomb'].pause();
+
+                }
+
                 if(document.xeblaster_settings['gun_level'] < 4)
                     self.remove_self();
                 var oname = obj.name;
@@ -320,7 +413,14 @@ function CheckEnemyCollisions(self, playerbullet){
                     if(obj.name == "diamonator"){
                         document.xeblaster_settings['red_score'] += 10;
                         document.xeblaster_settings['score'] += 10;
-
+                    }
+                    if(obj.name == "bomber"){
+                        document.xeblaster_settings['red_score'] += 10;
+                        document.xeblaster_settings['score'] += 10;
+                    }
+                    if(obj.name == "bomb"){
+                        document.xeblaster_settings['red_score'] += 5;
+                        document.xeblaster_settings['score'] += 5;
                     }
                 }
             }
@@ -339,14 +439,14 @@ function CheckPlayerCollisions(self, tolerance_x=150, tolerance_y=300, type='pla
             document.xeblaster_items['camera_shake'] = 10;
             document.xeblaster_settings['camera_shake_intensity']=100;
         }
-        else if(type=='kamikaze'){
+        else if(type=='kamikaze' || type == 'bomb'){
             document.xeblaster_settings['blue_score'] -= 50;
             document.xeblaster_items['camera_shake'] = 70;
             document.xeblaster_settings['camera_shake_intensity']=300;
         }
         if(type=='playerhit')
             MakeExplosion(type, self.position[0], self.position[1], self.position[2]);
-        else if(type=='kamikaze')
+        else if(type=='kamikaze' || type == 'bomb')
             MakeExplosion(type, self.position[0], self.position[1], self.position[2],
                     self.movement_direction[0]*self.speed, self.movement_direction[1]*self.speed, 
                     self.movement_direction[2]*self.speed);
